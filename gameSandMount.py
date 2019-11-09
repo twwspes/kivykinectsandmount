@@ -42,6 +42,8 @@ class SandMountApp(App):
 	arrayOfBackgroundDepth = []
 	screenWidth = 1000
 	screenHeight = 1000
+	tempIntX = 0
+	tempIntY = 0
 	# arrayOfWaterDrop = np.zeros((limitedHeight, limitedWidth), dtype=np.uint8)
 
 	def build(self):
@@ -56,8 +58,11 @@ class SandMountApp(App):
 		# AR marker
 		self.calibrateMarkerCode = [1, 3, 4, 9, 3727]
 		self.calibrateMarkerDepthPosition = {}
+		self.calibrateMarkerBGRAPosition = {}
 		self.projectorKinectMatchingMarkerCode = [991, 3322]
 		self.projectorKinectMatchingMarkerDepthPosition = {}
+		self.projectorKinectMatchingMarkerScreenPosition = {}
+		self.projectorKinectMatchingMarkerBGRAPosition = {}
 
 		self.img1=Image()
 		layout = BoxLayout()
@@ -83,12 +88,18 @@ class SandMountApp(App):
 				self.depthLimitedWidth = bottomRightPointX - self.depthOffsetX + 40
 				self.depthLimitedHeight = bottomRightPointY - self.depthOffsetY -50
 				self.didBackgroundCropped = True
-				Window.left = 522
-				Window.top = 204
-				Window.size = (904, 599)
+				# Window.left = 522
+				# Window.top = 204
+				# Window.size = (904, 599)
 				# self.arrayOfWaterDrop = np.zeros((limitedHeight, limitedWidth), dtype=np.uint8)
 
-		# if 991 in self.projectorKinectMatchingMarkerDepthPosition and 3314 in self.projectorKinectMatchingMarkerDepthPosition:
+		if (991 in self.projectorKinectMatchingMarkerDepthPosition and 3322 in self.projectorKinectMatchingMarkerDepthPosition)  and self.didProjectorKinectMatched == False:
+			Window.left = 522
+			Window.top = 204
+			Window.size = (904, 599)
+			print(self.projectorKinectMatchingMarkerScreenPosition)
+			print(self.projectorKinectMatchingMarkerDepthPosition)
+			self.didProjectorKinectMatched = True
 
 
 		frame = None
@@ -101,14 +112,15 @@ class SandMountApp(App):
 			frame = np.asanyarray(frame, dtype=np.uint8)
 			frame.shape = (self._kinect.color_frame_desc.Height, self._kinect.color_frame_desc.Width,4)
 			# depthFrame = self.draw_depth_SandMount_frame(depthFrame)
-			if self.didBackgroundDepthSaved == True and self.didBackgroundCropped == True:
+			if self.didBackgroundDepthSaved == True and self.didBackgroundCropped == True and self.didProjectorKinectMatched == True:
 				depthFrame = np.reshape(depthFrame, (self._kinect.depth_frame_desc.Height, self._kinect.depth_frame_desc.Width))
 				depthFrame = np.flip(depthFrame,1) #leftToRight
 				# depthFrame = cv2.flip(depthFrame, 0) #UpsideDown
 				depthFrameProcessed = self.draw_depth_SandMount_frame(depthFrame)
+				# I don't know why imShow do not need the following cvFlip to display the image correctly, but to use kivy (openGL) texture
+				# we'd better flip it upside down with cv2.flip here
 				depthFrameProcessed = cv2.flip(depthFrameProcessed, 0) #UpsideDown
-				# The below 4 lines are for displaying
-				# texture = Texture.create(size=(1920, 1080), colorfmt='bgra')
+				# The below 3 lines are for displaying
 				texture = Texture.create(size=(self.depthLimitedWidth, self.depthLimitedHeight), colorfmt='bgra')
 				texture.blit_buffer(depthFrameProcessed.tostring(), colorfmt='bgra', bufferfmt='ubyte')
 				self.img1.texture = texture
@@ -134,26 +146,44 @@ class SandMountApp(App):
 						depthFrame = np.flip(depthFrame,1)
 						# depthFrame = cv2.flip(depthFrame, 0) #UpsideDown
 						self.find_markers(frame, depthFrame)
+					# I don't know why imShow do not need the following cvFlip to display the image correctly, but to use kivy (openGL) texture
+					# we'd better flip it upside down with cv2.flip here
 					frame = cv2.flip(frame, 0)
 				# The below 3 lines are for displaying
 				# texture = Texture.create(size=(self._kinect.color_frame_desc.Width, self._kinect.color_frame_desc.Height), colorfmt='bgra')
 				# texture.blit_buffer(frame.tostring(), colorfmt='bgra', bufferfmt='ubyte')
 				# self.img1.texture = texture
 
-			'''if self.didProjectorKinectMatched == False and self.didBackgroundCropped == True:
+			if self.didProjectorKinectMatched == False and self.didBackgroundCropped == True:
 				# print('Window Position and Size:')
 				# print(Window.left)
 				# print(Window.top)
 				# print(Window.size)
 				# print(self.screenWidth, self.screenHeight)
 				if self.hasProjectorKinectFirstPointFound == False:
-					Window.left = 100
-					Window.top = 0
+					if self.tempIntY < self.screenHeight:
+						self.tempIntY = self.tempIntY + 1
+					else:
+						self.tempIntY = 0
+					Window.top = self.tempIntY
+					if self.tempIntY == 0:
+						self.tempIntX = self.tempIntX + 1
+					if self.tempIntX >= self.screenWidth:
+						self.tempIntX = 0
+					Window.left = self.tempIntX
 					Window.size = (200, 200)
 					self.img1.source = 'marker_991.png'
 				else:
-					Window.left = 200
-					Window.top = 100
+					if self.tempIntY < self.screenHeight:
+						self.tempIntY = self.tempIntY + 1
+					else:
+						self.tempIntY = 0
+					Window.top = self.tempIntY
+					if self.tempIntY == 0:
+						self.tempIntX = self.tempIntX + 1
+					if self.tempIntX >= self.screenWidth:
+						self.tempIntX = 0
+					Window.left = self.tempIntX
 					Window.size = (200, 200)
 					self.img1.source = 'marker_3314.png'
 				if frame is not None and depthFrame is not None:
@@ -162,7 +192,7 @@ class SandMountApp(App):
 					ret, dst= cv2.threshold(grey,230,255,cv2.THRESH_BINARY)
 					# cv2.imshow("Image", dst)
 					self.find_markers(dst, depthFrame)
-'''
+
 
 			depthFrame = None
 
@@ -243,18 +273,31 @@ class SandMountApp(App):
 				print(marker.id, marker.center, sep=": ")
 				depthPoint = mappingDepthtoColor[marker.center[1]][marker.center[0]]
 				print(depthPoint)
-				if not ((depthPoint[0] is np.float32('NaN')) | (depthPoint[0] is np.float32('Inf')) | (depthPoint[0] is np.float32('-Inf'))):
+				try:
 					depthPointInt = (int(depthPoint[0]), int(depthPoint[1]))
 					self.calibrateMarkerDepthPosition[marker.id] = depthPointInt
+				except:
+					print('cannot locate depthPoint of ' + str(marker.id))
 
 			if marker.id in self.projectorKinectMatchingMarkerCode:
 				print(marker.id, marker.center, sep=": ")
 				depthPoint = mappingDepthtoColor[marker.center[1]][marker.center[0]]
 				print(depthPoint)
-				if not ((depthPoint[0] is np.float32('NaN')) | (depthPoint[0] is np.float32('Inf')) | (depthPoint[0] is np.float32('-Inf'))):
-					depthPointInt = (int(depthPoint[0]), int(depthPoint[1]))
-					self.projectorKinectMatchingMarkerDepthPosition[marker.id] = depthPointInt
+				try:
+					if (991 not in self.projectorKinectMatchingMarkerDepthPosition and marker.id == 991):
+						screenPoint = (self.tempIntX, self.tempIntY)
+						self.projectorKinectMatchingMarkerScreenPosition[marker.id] =  screenPoint
+						self.tempIntX = self.tempIntX + 200
+						depthPointInt = (int(depthPoint[0]), int(depthPoint[1]))
+						self.projectorKinectMatchingMarkerDepthPosition[marker.id] = depthPointInt
+					if (3322 not in self.projectorKinectMatchingMarkerDepthPosition and marker.id == 3322):
+						screenPoint = (self.tempIntX, self.tempIntY)
+						self.projectorKinectMatchingMarkerScreenPosition[marker.id] =  screenPoint
+						depthPointInt = (int(depthPoint[0]), int(depthPoint[1]))
+						self.projectorKinectMatchingMarkerDepthPosition[marker.id] = depthPointInt
 					self.hasProjectorKinectFirstPointFound = True
+				except:
+					print('cannot locate depthPoint of ' + str(marker.id))
 			
 
 	# def addWaterDrop(self, objectHeights, frame8bit):
