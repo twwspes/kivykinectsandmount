@@ -77,16 +77,15 @@ class SandMountApp(App):
 			if 1 in self.calibrateMarkerDepthPosition and 9 in self.calibrateMarkerDepthPosition:
 				print(self.calibrateMarkerDepthPosition)
 				self.depthOffsetX = self.calibrateMarkerDepthPosition[1][0] + 72
-				self.depthOffsetY = self._kinect.depth_frame_desc.Height - self.calibrateMarkerDepthPosition[9][1] + 45
+				self.depthOffsetY = self.calibrateMarkerDepthPosition[1][1] + 45
 				bottomRightPointX = self.calibrateMarkerDepthPosition[9][0]
-				bottomRightPointY = self._kinect.depth_frame_desc.Height - self.calibrateMarkerDepthPosition[1][1]
+				bottomRightPointY = self.calibrateMarkerDepthPosition[9][1]
 				self.depthLimitedWidth = bottomRightPointX - self.depthOffsetX + 40
-				self.depthLimitedHeight = bottomRightPointY - self.depthOffsetY - 50
+				self.depthLimitedHeight = bottomRightPointY - self.depthOffsetY -50
 				self.didBackgroundCropped = True
-				# Window position and size resetting
-				# Window.left = 555
-				# Window.top = 192
-				# Window.size = (887, 622)
+				Window.left = 522
+				Window.top = 204
+				Window.size = (904, 599)
 				# self.arrayOfWaterDrop = np.zeros((limitedHeight, limitedWidth), dtype=np.uint8)
 
 		# if 991 in self.projectorKinectMatchingMarkerDepthPosition and 3314 in self.projectorKinectMatchingMarkerDepthPosition:
@@ -102,11 +101,12 @@ class SandMountApp(App):
 			frame = np.asanyarray(frame, dtype=np.uint8)
 			frame.shape = (self._kinect.color_frame_desc.Height, self._kinect.color_frame_desc.Width,4)
 			# depthFrame = self.draw_depth_SandMount_frame(depthFrame)
-			if self.didBackgroundDepthSaved == True and self.didBackgroundCropped == True and self.didProjectorKinectMatched == True:
+			if self.didBackgroundDepthSaved == True and self.didBackgroundCropped == True:
 				depthFrame = np.reshape(depthFrame, (self._kinect.depth_frame_desc.Height, self._kinect.depth_frame_desc.Width))
 				depthFrame = np.flip(depthFrame,1) #leftToRight
-				depthFrame = cv2.flip(depthFrame, 0) #UpsideDown
+				# depthFrame = cv2.flip(depthFrame, 0) #UpsideDown
 				depthFrameProcessed = self.draw_depth_SandMount_frame(depthFrame)
+				depthFrameProcessed = cv2.flip(depthFrameProcessed, 0) #UpsideDown
 				# The below 4 lines are for displaying
 				# texture = Texture.create(size=(1920, 1080), colorfmt='bgra')
 				texture = Texture.create(size=(self.depthLimitedWidth, self.depthLimitedHeight), colorfmt='bgra')
@@ -114,11 +114,14 @@ class SandMountApp(App):
 				self.img1.texture = texture
 				# self explanatory
 				self.img1.allow_stretch = True
+				# print(Window.left)
+				# print(Window.top)
+				# print(Window.size)
 				
 			if self.didBackgroundDepthSaved == False and self.didBackgroundCropped == True:
 				depthFrame = np.reshape(depthFrame, (self._kinect.depth_frame_desc.Height, self._kinect.depth_frame_desc.Width))
 				depthFrame = np.flip(depthFrame,1)
-				depthFrame = cv2.flip(depthFrame, 0)
+				# depthFrame = cv2.flip(depthFrame, 0)
 				self.save_depth_frame(depthFrame)
 				self.didBackgroundDepthSaved = True
 
@@ -127,7 +130,9 @@ class SandMountApp(App):
 				if frame is not None:
 					frame = np.flip(frame,1)
 					if depthFrame is not None:
-						# depthFrame = np.flip(depthFrame,1)
+						depthFrame = np.reshape(depthFrame, (self._kinect.depth_frame_desc.Height, self._kinect.depth_frame_desc.Width))
+						depthFrame = np.flip(depthFrame,1)
+						# depthFrame = cv2.flip(depthFrame, 0) #UpsideDown
 						self.find_markers(frame, depthFrame)
 					frame = cv2.flip(frame, 0)
 				# The below 3 lines are for displaying
@@ -135,7 +140,7 @@ class SandMountApp(App):
 				# texture.blit_buffer(frame.tostring(), colorfmt='bgra', bufferfmt='ubyte')
 				# self.img1.texture = texture
 
-			if self.didProjectorKinectMatched == False:
+			'''if self.didProjectorKinectMatched == False and self.didBackgroundCropped == True:
 				# print('Window Position and Size:')
 				# print(Window.left)
 				# print(Window.top)
@@ -157,7 +162,7 @@ class SandMountApp(App):
 					ret, dst= cv2.threshold(grey,230,255,cv2.THRESH_BINARY)
 					# cv2.imshow("Image", dst)
 					self.find_markers(dst, depthFrame)
-
+'''
 
 			depthFrame = None
 
@@ -206,7 +211,7 @@ class SandMountApp(App):
 		f8Blueint = np.reshape(f8Blue, (self.depthLimitedHeight * self.depthLimitedWidth, ))
 		f8Alphaint = np.full((self.depthLimitedHeight * self.depthLimitedWidth), 255, dtype=np.uint8)
 		frame8bit = np.dstack((f8Blueint, f8Greenint, f8Redint, f8Alphaint))
-		frame8bit.shape = (self.depthLimitedWidth, self.depthLimitedHeight, 4)
+		frame8bit.shape = (self.depthLimitedHeight, self.depthLimitedWidth, 4)
 		return frame8bit
 
 	def find_markers(self, frame, depthframe):
