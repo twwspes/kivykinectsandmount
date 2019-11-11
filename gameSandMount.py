@@ -44,7 +44,7 @@ class SandMountApp(App):
 	screenHeight = 1000
 	tempIntX = 0
 	tempIntY = 0
-	# arrayOfWaterDrop = np.zeros((limitedHeight, limitedWidth), dtype=np.uint8)
+	arrayOfWaterDrop = []
 
 	def build(self):
 		#using kinect
@@ -91,7 +91,7 @@ class SandMountApp(App):
 				# Window.left = 522
 				# Window.top = 204
 				# Window.size = (904, 599)
-				# self.arrayOfWaterDrop = np.zeros((limitedHeight, limitedWidth), dtype=np.uint8)
+				self.arrayOfWaterDrop = np.zeros((self.depthLimitedHeight, self.depthLimitedWidth), dtype=np.uint8)
 
 		if (991 in self.projectorKinectMatchingMarkerDepthPosition and 3314 in self.projectorKinectMatchingMarkerDepthPosition)  and self.didProjectorKinectMatched == False:
 			
@@ -115,7 +115,7 @@ class SandMountApp(App):
 			# screenPointYBottomRightCornerSandMount = screenPointYTopLeftCornerSandMount + diffHeightScreenPtBtwTopLeftCornerAndBottomRightCornerOfSandMount
 
 			Window.left = screenPointXTopLeftCornerSandMount -39
-			Window.top = screenPointYTopLeftCornerSandMount + 90
+			Window.top = screenPointYTopLeftCornerSandMount + 95
 			Window.size = (diffWidthScreenPtBtwTopLeftCornerAndBottomRightCornerOfSandMount, diffHeightScreenPtBtwTopLeftCornerAndBottomRightCornerOfSandMount)
 			# Window.left = 522
 			# Window.top = 204
@@ -123,6 +123,7 @@ class SandMountApp(App):
 			print(Window.left, Window.top)
 			print(Window.size)
 			self.didProjectorKinectMatched = True
+			
 
 
 		frame = None
@@ -265,6 +266,7 @@ class SandMountApp(App):
 		f8Alphaint = np.full((self.depthLimitedHeight * self.depthLimitedWidth), 255, dtype=np.uint8)
 		frame8bit = np.dstack((f8Blueint, f8Greenint, f8Redint, f8Alphaint))
 		frame8bit.shape = (self.depthLimitedHeight, self.depthLimitedWidth, 4)
+		frame8bit = self.addWaterDrop(objectHeights, frame8bit)
 		return frame8bit
 
 	def find_markers(self, frame, depthframe):
@@ -312,7 +314,7 @@ class SandMountApp(App):
 						screenPoint = (self.tempIntX, self.tempIntY)
 						self.projectorKinectMatchingMarkerScreenPosition[marker.id] =  screenPoint
 						self.tempIntX = self.tempIntX + 1200
-						self.tempIntY = self.tempIntY + 300
+						self.tempIntY = self.tempIntY + 200
 						depthPointInt = (int(depthPoint[0]), int(depthPoint[1]))
 						self.projectorKinectMatchingMarkerDepthPosition[marker.id] = depthPointInt
 					if (3314 not in self.projectorKinectMatchingMarkerDepthPosition and marker.id == 3314):
@@ -325,23 +327,23 @@ class SandMountApp(App):
 					print('cannot locate depthPoint of ' + str(marker.id))
 			
 
-	# def addWaterDrop(self, objectHeights, frame8bit):
-    #     objectHeightsint = objectHeights.astype(int)
-	# 	# for objHeight, cellOfWaterDrop in np.nditer([objectHeightsint, self.arrayOfWaterDrop], op_flags=['readwrite']):
-    #     #     if objHeight > 350 and objHeight < 400:
-    #     #         cellOfWaterDrop[...] +=np.uint8(20)
-    #     self.arrayOfWaterDrop[np.logical_and((objectHeightsint) > 350, (objectHeightsint)< 400)] += np.uint8(1)
-
-    #     WaterDepthColorBlue = np.uint8((self.arrayOfWaterDrop*10).clip(0,250))
-    #     WaterDepthColorBlue = np.kron(WaterDepthColorBlue, np.ones((int(1080/self.limitedHeight), int(1920/self.limitedWidth))))
-    #     WaterDepthColorBlueint = WaterDepthColorBlue.astype(np.uint8)
-    #     WaterDepthColor = np.zeros((int(1080/self.limitedHeight)*self.limitedHeight, int(1920/self.limitedWidth)*self.limitedWidth), dtype=np.uint8)
-    #     f8Alphaint = np.ones((int(1080/self.limitedHeight)* self.limitedHeight, int(1920/self.limitedWidth) * self.limitedWidth, ), dtype=np.uint8)
-    #     Waterframe8bit = np.dstack((WaterDepthColorBlueint, WaterDepthColor, WaterDepthColor, f8Alphaint))
-    #     frame8bit = np.reshape(frame8bit, (int(1080/self.limitedHeight)* self.limitedHeight, int(1920/self.limitedWidth) * self.limitedWidth, 4))
-    #     WaterCVmat = cv2.addWeighted(frame8bit, 0.5, Waterframe8bit, 0.5, 0)
-    #     WaterCVmat = np.reshape(WaterCVmat, (int(1080/self.limitedHeight)* self.limitedHeight * int(1920/self.limitedWidth) * self.limitedWidth, 4))
-    #     return WaterCVmat
+	def addWaterDrop(self, objectHeights, frame8bit):
+		objectHeightsint = objectHeights.astype(int)
+		# for objHeight, cellOfWaterDrop in np.nditer([objectHeightsint, self.arrayOfWaterDrop], op_flags=['readwrite']):
+		#     if objHeight > 350 and objHeight < 400:
+		#         cellOfWaterDrop[...] +=np.uint8(20)
+		self.arrayOfWaterDrop[np.logical_and((objectHeightsint) > 350, (objectHeightsint)< 400)] += np.uint8(1)
+		clippedWaterDropTemp = self.arrayOfWaterDrop.clip(0, 20)
+		WaterDepthColorBlue = np.uint8((clippedWaterDropTemp*10).clip(0,255))
+		WaterDepthColor = np.zeros((self.depthLimitedHeight, self.depthLimitedWidth), dtype=np.uint8)
+		f8Alphaint = np.uint8((clippedWaterDropTemp*10).clip(0,255))
+		f8AlphaintFull = np.full((self.depthLimitedHeight, self.depthLimitedWidth), 255, dtype=np.uint8)
+		f8Alphaintx4 = np.dstack((f8Alphaint, f8Alphaint, f8Alphaint, f8Alphaint))/255
+		Waterframe8bit = np.dstack((WaterDepthColorBlue, WaterDepthColor, WaterDepthColor, f8AlphaintFull))
+		# cv2.imshow('WaterFrame',Waterframe8bit)
+		WaterCVmat = frame8bit * (1 - f8Alphaintx4) + Waterframe8bit * f8Alphaintx4
+		WaterCVmat = WaterCVmat.astype(np.uint8)
+		return WaterCVmat
 
 if __name__ == '__main__':
 	SandMountApp().run()
