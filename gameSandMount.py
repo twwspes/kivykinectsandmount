@@ -22,6 +22,9 @@ import cv2
 import numpy as np
 import math
 
+from random import seed
+from random import randint
+
 from ar_markers import detect_markers
 
 from threading import Thread
@@ -267,6 +270,7 @@ class SandMountApp(App):
 		frame8bit = np.dstack((f8Blueint, f8Greenint, f8Redint, f8Alphaint))
 		frame8bit.shape = (self.depthLimitedHeight, self.depthLimitedWidth, 4)
 		frame8bit = self.addWaterDrop(objectHeights, frame8bit)
+		self.moveWaterDrop(objectHeights)
 		return frame8bit
 
 	def find_markers(self, frame, depthframe):
@@ -344,6 +348,60 @@ class SandMountApp(App):
 		WaterCVmat = frame8bit * (1 - f8Alphaintx4) + Waterframe8bit * f8Alphaintx4
 		WaterCVmat = WaterCVmat.astype(np.uint8)
 		return WaterCVmat
+
+	def moveWaterDrop(self, objectHeights):
+		objectHeightsint = objectHeights.astype(int)
+		for y in range(40, objectHeights.shape[0]-10):
+			for x in range(40, objectHeights.shape[1]-10):
+				objHeightsAtWaterDrop = objectHeightsint[y-1:y+2, x-1:x+2]
+				for k in range(0,self.arrayOfWaterDrop[y, x]):
+					waterDepth = self.arrayOfWaterDrop[y-1:y+2, x-1:x+2]
+					totalHeightWithWaterDepth = objHeightsAtWaterDrop + waterDepth
+					minHeight = np.amin(totalHeightWithWaterDepth)
+					for i in range(0, 9):
+						n = int(i/3)
+						m = int(i%3)
+						if totalHeightWithWaterDepth[n, m] == minHeight:
+							self.arrayOfWaterDrop[y, x] = self.arrayOfWaterDrop[y, x] - 1
+							self.arrayOfWaterDrop[y+n-1, x+m-1] = self.arrayOfWaterDrop[y+n-1, x+m-1] + 1
+							break
+
+
+				# objHeightsAtWaterDrop = objectHeightsint[y-1:y+2, x-1:x+2]
+				# waterDepth = self.arrayOfWaterDrop[y-1:y+2, x-1:x+2]
+				# sumWaterDepth = waterDepth.sum()
+				# if sumWaterDepth > 0:
+				# 	whichMatrixRemoved = [1,1,1,1,1,1,1,1,1]
+				# 	averageHeight = 0
+				# 	# isMatrixRemoved = False
+				# 	notWaterDropDistributed = True
+				# 	while notWaterDropDistributed:
+				# 		notMatrixRemoved = True
+				# 		sumWhichMatrixRemoved = sum(whichMatrixRemoved)
+				# 		sumObjHeightAtWaterDrop = objHeightsAtWaterDrop.sum()
+				# 		averageHeight = (sumObjHeightAtWaterDrop + sumWaterDepth) / (sumWhichMatrixRemoved if sumWhichMatrixRemoved != 0 else 1)
+				# 		for i in range(0, 9):
+				# 			n = int(i/3)
+				# 			m = int(i%3)
+				# 			if averageHeight < objHeightsAtWaterDrop[n, m]:
+				# 				# objHeightsAtWaterDrop[n, m] = 0
+				# 				notMatrixRemoved = False
+				# 				whichMatrixRemoved[i] = 0
+				# 		if notMatrixRemoved:
+				# 			sumWaterDropDistributed = 0
+				# 			for i in range(0, 9):
+				# 				n = int(i/3)
+				# 				m = int(i%3)
+				# 				if whichMatrixRemoved[i] == 1:
+				# 					self.arrayOfWaterDrop[y+n-1, x+m-1] = np.uint8(averageHeight - objHeightsAtWaterDrop[n, m])
+				# 					sumWaterDropDistributed += averageHeight - objHeightsAtWaterDrop[n, m]
+				# 				else:
+				# 					self.arrayOfWaterDrop[y+n-1, x+m-1] = np.uint8(0)
+				# 			remainingWater = sumWaterDepth - sumWaterDropDistributed
+				# 			seed(1)
+				# 			random = randint(0,8)
+				# 			self.arrayOfWaterDrop[y+int(random/3)-1, x+int(random%3)-1] += np.uint8(remainingWater if remainingWater >=0 else 0)
+				# 			notWaterDropDistributed = False
 
 if __name__ == '__main__':
 	SandMountApp().run()
