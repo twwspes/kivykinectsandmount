@@ -59,7 +59,7 @@ class SandMountApp(App):
 		self.calibrateMarkerCode = [1, 3, 4, 9, 3727]
 		self.calibrateMarkerDepthPosition = {}
 		self.calibrateMarkerBGRAPosition = {}
-		self.projectorKinectMatchingMarkerCode = [991, 3322]
+		self.projectorKinectMatchingMarkerCode = [991, 3314]
 		self.projectorKinectMatchingMarkerDepthPosition = {}
 		self.projectorKinectMatchingMarkerScreenPosition = {}
 		self.projectorKinectMatchingMarkerBGRAPosition = {}
@@ -93,12 +93,35 @@ class SandMountApp(App):
 				# Window.size = (904, 599)
 				# self.arrayOfWaterDrop = np.zeros((limitedHeight, limitedWidth), dtype=np.uint8)
 
-		if (991 in self.projectorKinectMatchingMarkerDepthPosition and 3322 in self.projectorKinectMatchingMarkerDepthPosition)  and self.didProjectorKinectMatched == False:
-			Window.left = 522
-			Window.top = 204
-			Window.size = (904, 599)
+		if (991 in self.projectorKinectMatchingMarkerDepthPosition and 3314 in self.projectorKinectMatchingMarkerDepthPosition)  and self.didProjectorKinectMatched == False:
+			
 			print(self.projectorKinectMatchingMarkerScreenPosition)
 			print(self.projectorKinectMatchingMarkerDepthPosition)
+			diffWidthDepthPtBtwTwoCalibrationPt  = self.projectorKinectMatchingMarkerDepthPosition[3314][0] - self.projectorKinectMatchingMarkerDepthPosition[991][0]
+			diffHeightDepthPtBtwTwoCalibrationPt = self.projectorKinectMatchingMarkerDepthPosition[3314][1] - self.projectorKinectMatchingMarkerDepthPosition[991][1]
+			diffWidthDepthPtBtwLastCalibrationPtAndTopleftCornerOfSandMount =  self.depthOffsetX - self.projectorKinectMatchingMarkerDepthPosition[3314][0]
+			diffHeightDepthPtBtwLastCalibrationPtAndTopleftCornerOfSandMount =  self.depthOffsetY - self.projectorKinectMatchingMarkerDepthPosition[3314][1]
+			diffWidthScreenPtBtwTwoCalibrationPt = self.projectorKinectMatchingMarkerScreenPosition[3314][0] -  self.projectorKinectMatchingMarkerScreenPosition[991][0]
+			diffHeightScreenPtBtwTwoCalibrationPt = self.projectorKinectMatchingMarkerScreenPosition[3314][1] -  self.projectorKinectMatchingMarkerScreenPosition[991][1]
+			diffWidthScreenPtBtwLastCalibrationPtAndTopleftCornerOfSandMount = diffWidthScreenPtBtwTwoCalibrationPt/diffWidthDepthPtBtwTwoCalibrationPt*diffWidthDepthPtBtwLastCalibrationPtAndTopleftCornerOfSandMount
+			diffHeightScreenPtBtwLastCalibrationPtAndTopleftCornerOfSandMount = diffHeightScreenPtBtwTwoCalibrationPt/diffHeightDepthPtBtwTwoCalibrationPt*diffHeightDepthPtBtwLastCalibrationPtAndTopleftCornerOfSandMount
+			screenPointXTopLeftCornerSandMount = diffWidthScreenPtBtwLastCalibrationPtAndTopleftCornerOfSandMount + diffWidthScreenPtBtwTwoCalibrationPt
+			screenPointYTopLeftCornerSandMount = diffHeightScreenPtBtwLastCalibrationPtAndTopleftCornerOfSandMount + diffHeightScreenPtBtwTwoCalibrationPt
+			diffWidthDepthPtBtwTopLeftCornerAndBottomRightCornerOfSandMount = self.depthLimitedWidth
+			diffHeightDepthPtBtwTopLeftCornerAndBottomRightCornerOfSandMount = self.depthLimitedHeight
+			diffWidthScreenPtBtwTopLeftCornerAndBottomRightCornerOfSandMount =   diffWidthScreenPtBtwTwoCalibrationPt / diffWidthDepthPtBtwTwoCalibrationPt * diffWidthDepthPtBtwTopLeftCornerAndBottomRightCornerOfSandMount
+			diffHeightScreenPtBtwTopLeftCornerAndBottomRightCornerOfSandMount = diffHeightScreenPtBtwTwoCalibrationPt / diffHeightDepthPtBtwTwoCalibrationPt * diffHeightDepthPtBtwTopLeftCornerAndBottomRightCornerOfSandMount
+			# screenPointXBottomRightCornerSandMount = screenPointXTopLeftCornerSandMount +  diffWidthScreenPtBtwTopLeftCornerAndBottomRightCornerOfSandMount
+			# screenPointYBottomRightCornerSandMount = screenPointYTopLeftCornerSandMount + diffHeightScreenPtBtwTopLeftCornerAndBottomRightCornerOfSandMount
+
+			Window.left = screenPointXTopLeftCornerSandMount -39
+			Window.top = screenPointYTopLeftCornerSandMount + 90
+			Window.size = (diffWidthScreenPtBtwTopLeftCornerAndBottomRightCornerOfSandMount, diffHeightScreenPtBtwTopLeftCornerAndBottomRightCornerOfSandMount)
+			# Window.left = 522
+			# Window.top = 204
+			# Window.size = (904, 599)
+			print(Window.left, Window.top)
+			print(Window.size)
 			self.didProjectorKinectMatched = True
 
 
@@ -189,7 +212,7 @@ class SandMountApp(App):
 				if frame is not None and depthFrame is not None:
 					frame = np.flip(frame,1)
 					grey =  cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
-					ret, dst= cv2.threshold(grey,230,255,cv2.THRESH_BINARY)
+					ret, dst= cv2.threshold(grey,250,255,cv2.THRESH_BINARY)
 					# cv2.imshow("Image", dst)
 					self.find_markers(dst, depthFrame)
 
@@ -267,7 +290,8 @@ class SandMountApp(App):
 		for marker in markers:
 		#	marker.highlite_marker(frame)
 		#	self.label.text = str(marker.id) + str(marker.center)
-			# print(marker.id)
+			if (marker.id not in self.calibrateMarkerCode):
+				print(marker.id)
 			if marker.id in self.calibrateMarkerCode and (not 1 in self.calibrateMarkerDepthPosition or not 9 in self.calibrateMarkerDepthPosition):
 				# self.calibrateMarkerCode.append(marker.id)
 				print(marker.id, marker.center, sep=": ")
@@ -287,10 +311,11 @@ class SandMountApp(App):
 					if (991 not in self.projectorKinectMatchingMarkerDepthPosition and marker.id == 991):
 						screenPoint = (self.tempIntX, self.tempIntY)
 						self.projectorKinectMatchingMarkerScreenPosition[marker.id] =  screenPoint
-						self.tempIntX = self.tempIntX + 200
+						self.tempIntX = self.tempIntX + 1200
+						self.tempIntY = self.tempIntY + 300
 						depthPointInt = (int(depthPoint[0]), int(depthPoint[1]))
 						self.projectorKinectMatchingMarkerDepthPosition[marker.id] = depthPointInt
-					if (3322 not in self.projectorKinectMatchingMarkerDepthPosition and marker.id == 3322):
+					if (3314 not in self.projectorKinectMatchingMarkerDepthPosition and marker.id == 3314):
 						screenPoint = (self.tempIntX, self.tempIntY)
 						self.projectorKinectMatchingMarkerScreenPosition[marker.id] =  screenPoint
 						depthPointInt = (int(depthPoint[0]), int(depthPoint[1]))
