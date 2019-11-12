@@ -27,7 +27,7 @@ from random import randint
 
 from ar_markers import detect_markers
 
-from threading import Thread
+# from threading import Thread
 
 
 
@@ -49,6 +49,10 @@ class SandMountApp(App):
 	tempIntY = 0
 	arrayOfWaterDrop = []
 
+	def on_stop(self):
+		print('on_stop triggered')
+		self.layout.remove_widget(self.img1)
+
 	def build(self):
 		#using kinect
 		self._kinect = PyKinectRuntime.PyKinectRuntime(PyKinectV2.FrameSourceTypes_Color | PyKinectV2.FrameSourceTypes_Depth)
@@ -59,33 +63,34 @@ class SandMountApp(App):
 		self.screenHeight = root.winfo_screenheight()
 
 		# AR marker
-		self.calibrateMarkerCode = [1, 3, 4, 9, 3727]
+		self.exitMarker = [1]
+		self.calibrateMarkerCode = [3, 4, 9, 3727]
 		self.calibrateMarkerDepthPosition = {}
 		self.calibrateMarkerBGRAPosition = {}
-		self.projectorKinectMatchingMarkerCode = [991, 3314]
+		self.projectorKinectMatchingMarkerCode = [991, 4090]
 		self.projectorKinectMatchingMarkerDepthPosition = {}
 		self.projectorKinectMatchingMarkerScreenPosition = {}
 		self.projectorKinectMatchingMarkerBGRAPosition = {}
 
 		self.img1=Image()
-		layout = BoxLayout()
-		layout.add_widget(self.img1)	
+		self.layout = BoxLayout()
+		self.layout.add_widget(self.img1)	
 
 		#scale window to max
 		# Window.fullscreen = True
 		Window.show_cursor = True
 		
-		Clock.schedule_interval(self.update, 1.0/25.0)
-		return layout
+		Clock.schedule_interval(self.update, 1.0/15.0)
+		return self.layout
 
 	def update(self, dt):
 
 		# After two calibration markers are detected, cropping the sand container out from screen
 		if self.didBackgroundCropped == False:
-			if 1 in self.calibrateMarkerDepthPosition and 9 in self.calibrateMarkerDepthPosition:
+			if 3 in self.calibrateMarkerDepthPosition and 9 in self.calibrateMarkerDepthPosition:
 				print(self.calibrateMarkerDepthPosition)
-				self.depthOffsetX = self.calibrateMarkerDepthPosition[1][0] + 72
-				self.depthOffsetY = self.calibrateMarkerDepthPosition[1][1] + 45
+				self.depthOffsetX = self.calibrateMarkerDepthPosition[3][0] + 72
+				self.depthOffsetY = self.calibrateMarkerDepthPosition[3][1] + 45
 				bottomRightPointX = self.calibrateMarkerDepthPosition[9][0]
 				bottomRightPointY = self.calibrateMarkerDepthPosition[9][1]
 				self.depthLimitedWidth = bottomRightPointX - self.depthOffsetX + 40
@@ -96,16 +101,16 @@ class SandMountApp(App):
 				# Window.size = (904, 599)
 				self.arrayOfWaterDrop = np.zeros((self.depthLimitedHeight, self.depthLimitedWidth), dtype=np.uint8)
 
-		if (991 in self.projectorKinectMatchingMarkerDepthPosition and 3314 in self.projectorKinectMatchingMarkerDepthPosition)  and self.didProjectorKinectMatched == False:
-			
+		#After two projector kinect calibration markers are detected, we set the X Y offset and size of window 
+		if (991 in self.projectorKinectMatchingMarkerDepthPosition and 4090 in self.projectorKinectMatchingMarkerDepthPosition)  and self.didProjectorKinectMatched == False:
 			print(self.projectorKinectMatchingMarkerScreenPosition)
 			print(self.projectorKinectMatchingMarkerDepthPosition)
-			diffWidthDepthPtBtwTwoCalibrationPt  = self.projectorKinectMatchingMarkerDepthPosition[3314][0] - self.projectorKinectMatchingMarkerDepthPosition[991][0]
-			diffHeightDepthPtBtwTwoCalibrationPt = self.projectorKinectMatchingMarkerDepthPosition[3314][1] - self.projectorKinectMatchingMarkerDepthPosition[991][1]
-			diffWidthDepthPtBtwLastCalibrationPtAndTopleftCornerOfSandMount =  self.depthOffsetX - self.projectorKinectMatchingMarkerDepthPosition[3314][0]
-			diffHeightDepthPtBtwLastCalibrationPtAndTopleftCornerOfSandMount =  self.depthOffsetY - self.projectorKinectMatchingMarkerDepthPosition[3314][1]
-			diffWidthScreenPtBtwTwoCalibrationPt = self.projectorKinectMatchingMarkerScreenPosition[3314][0] -  self.projectorKinectMatchingMarkerScreenPosition[991][0]
-			diffHeightScreenPtBtwTwoCalibrationPt = self.projectorKinectMatchingMarkerScreenPosition[3314][1] -  self.projectorKinectMatchingMarkerScreenPosition[991][1]
+			diffWidthDepthPtBtwTwoCalibrationPt  = self.projectorKinectMatchingMarkerDepthPosition[4090][0] - self.projectorKinectMatchingMarkerDepthPosition[991][0]
+			diffHeightDepthPtBtwTwoCalibrationPt = self.projectorKinectMatchingMarkerDepthPosition[4090][1] - self.projectorKinectMatchingMarkerDepthPosition[991][1]
+			diffWidthDepthPtBtwLastCalibrationPtAndTopleftCornerOfSandMount =  self.depthOffsetX - self.projectorKinectMatchingMarkerDepthPosition[4090][0]
+			diffHeightDepthPtBtwLastCalibrationPtAndTopleftCornerOfSandMount =  self.depthOffsetY - self.projectorKinectMatchingMarkerDepthPosition[4090][1]
+			diffWidthScreenPtBtwTwoCalibrationPt = self.projectorKinectMatchingMarkerScreenPosition[4090][0] -  self.projectorKinectMatchingMarkerScreenPosition[991][0]
+			diffHeightScreenPtBtwTwoCalibrationPt = self.projectorKinectMatchingMarkerScreenPosition[4090][1] -  self.projectorKinectMatchingMarkerScreenPosition[991][1]
 			diffWidthScreenPtBtwLastCalibrationPtAndTopleftCornerOfSandMount = diffWidthScreenPtBtwTwoCalibrationPt/diffWidthDepthPtBtwTwoCalibrationPt*diffWidthDepthPtBtwLastCalibrationPtAndTopleftCornerOfSandMount
 			diffHeightScreenPtBtwLastCalibrationPtAndTopleftCornerOfSandMount = diffHeightScreenPtBtwTwoCalibrationPt/diffHeightDepthPtBtwTwoCalibrationPt*diffHeightDepthPtBtwLastCalibrationPtAndTopleftCornerOfSandMount
 			screenPointXTopLeftCornerSandMount = diffWidthScreenPtBtwLastCalibrationPtAndTopleftCornerOfSandMount + diffWidthScreenPtBtwTwoCalibrationPt
@@ -153,6 +158,9 @@ class SandMountApp(App):
 				self.img1.texture = texture
 				# self explanatory
 				self.img1.allow_stretch = True
+				if frame is not None:
+					frame = np.flip(frame, 1)
+					self.find_markers(frame, depthFrame)
 				# print(Window.left)
 				# print(Window.top)
 				# print(Window.size)
@@ -222,9 +230,6 @@ class SandMountApp(App):
 
 
 			depthFrame = None
-
-
-		
 
 
 	def save_depth_frame(self, frame):
@@ -298,7 +303,8 @@ class SandMountApp(App):
 		#	self.label.text = str(marker.id) + str(marker.center)
 			if (marker.id not in self.calibrateMarkerCode):
 				print(marker.id)
-			if marker.id in self.calibrateMarkerCode and (not 1 in self.calibrateMarkerDepthPosition or not 9 in self.calibrateMarkerDepthPosition):
+
+			if marker.id in self.calibrateMarkerCode and (not 3 in self.calibrateMarkerDepthPosition or not 9 in self.calibrateMarkerDepthPosition):
 				# self.calibrateMarkerCode.append(marker.id)
 				print(marker.id, marker.center, sep=": ")
 				depthPoint = mappingDepthtoColor[marker.center[1]][marker.center[0]]
@@ -321,7 +327,7 @@ class SandMountApp(App):
 						self.tempIntY = self.tempIntY + 200
 						depthPointInt = (int(depthPoint[0]), int(depthPoint[1]))
 						self.projectorKinectMatchingMarkerDepthPosition[marker.id] = depthPointInt
-					if (3314 not in self.projectorKinectMatchingMarkerDepthPosition and marker.id == 3314):
+					if (4090 not in self.projectorKinectMatchingMarkerDepthPosition and marker.id == 4090):
 						screenPoint = (self.tempIntX, self.tempIntY)
 						self.projectorKinectMatchingMarkerScreenPosition[marker.id] =  screenPoint
 						depthPointInt = (int(depthPoint[0]), int(depthPoint[1]))
@@ -329,18 +335,26 @@ class SandMountApp(App):
 					self.hasProjectorKinectFirstPointFound = True
 				except:
 					print('cannot locate depthPoint of ' + str(marker.id))
+
+			if marker.id in self.exitMarker:
+				print('Exit marker found, exiting the game...')
+				print(self)
+				# self.stop()
+
+
+
 			
 
-	def addWaterDrop(self, objectHeights, frame8bit):
+	def addWaterDrop(self, objectHeights, frame8bit, offsetX=0, offsetY=0, width=0, height=0, thickness=0):
 		objectHeightsint = objectHeights.astype(int)
 		# for objHeight, cellOfWaterDrop in np.nditer([objectHeightsint, self.arrayOfWaterDrop], op_flags=['readwrite']):
 		#     if objHeight > 350 and objHeight < 400:
 		#         cellOfWaterDrop[...] +=np.uint8(20)
 		self.arrayOfWaterDrop[np.logical_and((objectHeightsint) > 350, (objectHeightsint)< 400)] += np.uint8(1)
-		clippedWaterDropTemp = self.arrayOfWaterDrop.clip(0, 20)
-		WaterDepthColorBlue = np.uint8((clippedWaterDropTemp*10).clip(0,255))
+		arrayOfWaterDrop = self.arrayOfWaterDrop.clip(0, 10)
+		WaterDepthColorBlue = np.uint8((arrayOfWaterDrop*20).clip(0,255))
 		WaterDepthColor = np.zeros((self.depthLimitedHeight, self.depthLimitedWidth), dtype=np.uint8)
-		f8Alphaint = np.uint8((clippedWaterDropTemp*10).clip(0,255))
+		f8Alphaint = np.uint8((arrayOfWaterDrop*20).clip(0,255))
 		f8AlphaintFull = np.full((self.depthLimitedHeight, self.depthLimitedWidth), 255, dtype=np.uint8)
 		f8Alphaintx4 = np.dstack((f8Alphaint, f8Alphaint, f8Alphaint, f8Alphaint))/255
 		Waterframe8bit = np.dstack((WaterDepthColorBlue, WaterDepthColor, WaterDepthColor, f8AlphaintFull))
@@ -351,8 +365,8 @@ class SandMountApp(App):
 
 	def moveWaterDrop(self, objectHeights):
 		objectHeightsint = objectHeights.astype(int)
-		for y in range(40, objectHeights.shape[0]-10):
-			for x in range(40, objectHeights.shape[1]-10):
+		for y in range(1, objectHeights.shape[0]-1):
+			for x in range(1, objectHeights.shape[1]-1):
 				objHeightsAtWaterDrop = objectHeightsint[y-1:y+2, x-1:x+2]
 				for k in range(0,self.arrayOfWaterDrop[y, x]):
 					waterDepth = self.arrayOfWaterDrop[y-1:y+2, x-1:x+2]
